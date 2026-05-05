@@ -3,6 +3,3 @@ build*/
 *.user
 .cmake/
 CMakeLists.txt.user
-
-# SQLite (opcjonalnie - jeśli nie chcesz wysyłać bazy z danymi)
-*.db
