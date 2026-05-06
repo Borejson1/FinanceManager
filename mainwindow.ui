@@ -6,85 +6,50 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>753</width>
-    <height>510</height>
+    <width>800</width>
+    <height>600</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>Menedżer Finansów</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
+    
     <item>
-     <layout class="QGridLayout" name="gridLayout">
-      <item row="1" column="3">
-       <widget class="QLineEdit" name="lineEdit"/>
-      </item>
-      <item row="0" column="0">
-       <widget class="QLabel" name="label">
+     <widget class="QTableView" name="tableView"/>
+    </item>
+    
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <widget class="QPushButton" name="pushButton">
         <property name="text">
-         <string>Kwota</string>
+         <string>Dodaj Operację</string>
         </property>
        </widget>
       </item>
-      <item row="0" column="3">
-       <widget class="QLabel" name="label_5">
+      <item>
+       <widget class="QPushButton" name="pushButton_2">
         <property name="text">
-         <string>Opis</string>
+         <string>Dodaj Kategorię</string>
         </property>
-       </widget>
-      </item>
-      <item row="1" column="0">
-       <widget class="QLineEdit" name="editAmount"/>
-      </item>
-      <item row="0" column="2">
-       <widget class="QLabel" name="label_4">
-        <property name="text">
-         <string>Data</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="2">
-       <widget class="QLineEdit" name="editDate"/>
-      </item>
-      <item row="0" column="1">
-       <widget class="QLabel" name="label_3">
-        <property name="text">
-         <string>Kategoria</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="1">
-       <widget class="QComboBox" name="comboType">
-        <item>
-         <property name="text">
-          <string>-- Wybierz kategorię --</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>Jedzenie</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>Rozrywka</string>
-         </property>
-        </item>
        </widget>
       </item>
      </layout>
     </item>
+    
     <item>
-     <widget class="QTableView" name="tableView"/>
-    </item>
-    <item>
-     <widget class="QPushButton" name="pushButton">
-      <property name="text">
-       <string>Dodaj Wydatek</string>
+     <widget class="QStackedWidget" name="stackedWidget">
+      <property name="currentIndex">
+       <number>0</number>
       </property>
+      
+      <widget class="QWidget" name="page_empty"/>
+      
      </widget>
     </item>
+    
    </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -92,7 +57,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>753</width>
+     <width>800</width>
      <height>21</height>
     </rect>
    </property>

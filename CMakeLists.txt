@@ -12,6 +12,13 @@ qt_add_executable(FinanceManager
     mainwindow.cpp
     mainwindow.h
     mainwindow.ui
+    source/AddTransaction.h source/AddTransaction.cpp source/AddTransaction.ui
+    source/AddCategory.h source/AddCategory.cpp source/AddCategory.ui
+
+
+
+
+
 )
 
 target_link_libraries(FinanceManager

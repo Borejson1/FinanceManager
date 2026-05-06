@@ -12,16 +12,19 @@ class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
+public slots:
+    void refreshTable();
+
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
 private slots:
-    void on_editDate_textEdited(const QString &text);
     void on_pushButton_clicked();
+    void on_pushButton_2_clicked();
 
 private:
     Ui::MainWindow *ui;
     QSqlQueryModel *model;
 };
-#endif // MAINWINDOW_H
+#endif
