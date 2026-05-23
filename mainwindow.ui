@@ -6,22 +6,70 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>600</height>
+    <width>1000</width>
+    <height>750</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Menedżer Finansów</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">
+QMainWindow {
+    background-color: #f5f6fa;
+}
+QTableView {
+    background-color: #ffffff;
+    border: 1px solid #dcdde1;
+    border-radius: 4px;
+    gridline-color: #e8e8e8;
+    selection-background-color: #a4b0be;
+    selection-color: black;
+}
+QHeaderView::section {
+    background-color: #f1f2f6;
+    color: #2f3542;
+    padding: 6px;
+    border: none;
+    border-right: 1px solid #dcdde1;
+    border-bottom: 1px solid #dcdde1;
+    font-weight: bold;
+}
+QPushButton {
+    background-color: #dfe4ea;
+    color: #2f3542;
+    border: 1px solid #ced6e0;
+    border-radius: 5px;
+    padding: 10px 15px;
+    font-weight: bold;
+    font-size: 13px;
+}
+QPushButton:hover {
+    background-color: #ced6e0;
+}
+QPushButton:pressed {
+    background-color: #a4b0be;
+}
+   </string>
+  </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout" name="verticalLayout">
-    
+   <layout class="QVBoxLayout" name="verticalLayout" stretch="1,0,2">
     <item>
-     <widget class="QTableView" name="tableView"/>
+     <widget class="QTableView" name="tableView">
+      <property name="alternatingRowColors">
+       <bool>true</bool>
+      </property>
+     </widget>
     </item>
-    
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout">
+     <layout class="QHBoxLayout" name="horizontalLayout" stretch="2,1,1">
+      <item>
+       <widget class="QPushButton" name="pushButton_3">
+        <property name="text">
+         <string>Strona Główna (Wykresy)</string>
+        </property>
+       </widget>
+      </item>
       <item>
        <widget class="QPushButton" name="pushButton">
         <property name="text">
@@ -38,18 +86,13 @@
       </item>
      </layout>
     </item>
-    
     <item>
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>-1</number>
       </property>
-      
-      <widget class="QWidget" name="page_empty"/>
-      
      </widget>
     </item>
-    
    </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -57,7 +100,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>800</width>
+     <width>1000</width>
      <height>21</height>
     </rect>
    </property>
