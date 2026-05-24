@@ -1,7 +1,11 @@
 #include "mainwindow.h"
+#include "financechartmanager.h"
 #include "ui_mainwindow.h"
 #include "source/AddTransaction.h"
 #include "source/AddCategory.h"
+
+#include <QStandardPaths>
+#include <QDir>
 
 #include <QSqlDatabase>
 #include <QSqlQuery>
@@ -36,14 +40,21 @@ MainWindow::MainWindow(QWidget *parent)
     if (!dir.exists("databases")) dir.mkpath("databases");
 
     QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
-    db.setDatabaseName("C:/Users/macie/Documents/FinanceManager/databases/finances.db");
-    //DO POPRAWIENIA W DALSZYM CIĄGU!!!
+    QString path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    QDir().mkpath(path);
+    db.setDatabaseName(path + "/finances.db");
 
     if (!db.open()) {
+
         QMessageBox::critical(this, "Błąd", "Nie udało się połączyć: " + db.lastError().text());
         return;
     }
+    transactionModel = new QSqlTableModel(this);
+    transactionModel->setTable("transactions");
+    transactionModel->setEditStrategy(QSqlTableModel::OnManualSubmit);
+    transactionModel->select();
 
+    ui->tableView->setModel(transactionModel);
     QSqlQuery query;
     query.exec("CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, type TEXT NOT NULL)");
     query.exec("CREATE TABLE IF NOT EXISTS transactions (id INTEGER PRIMARY KEY AUTOINCREMENT, amount REAL NOT NULL, date TEXT NOT NULL, description TEXT, category_id INTEGER, created_at TEXT)");
@@ -76,12 +87,11 @@ MainWindow::MainWindow(QWidget *parent)
         updateIncomeChart();
     });
 
-    mainChart = new QChart();
-    mainChart->setTitle("Podsumowanie Finansów");
-    mainChart->setAnimationOptions(QChart::SeriesAnimations);
 
-    QChartView *chartView = new QChartView(mainChart);
-    chartView->setRenderHint(QPainter::Antialiasing);
+
+    QChartView *chartView = new QChartView(this);
+    chartManager = new FinanceChartManager(chartView);
+    mainChart = chartView->chart();
 
     dashboardLayout->addLayout(chartMenuLayout, 1);
     dashboardLayout->addWidget(chartView, 4);
@@ -101,13 +111,15 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->tableView->setModel(model);
     ui->tableView->hideColumn(0);
+    ui->tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui->tableView->setSelectionMode(QAbstractItemView::SingleSelection);
     model->setHeaderData(1, Qt::Horizontal, "Kwota");
     model->setHeaderData(2, Qt::Horizontal, "Typ");
     model->setHeaderData(3, Qt::Horizontal, "Kategoria");
     model->setHeaderData(4, Qt::Horizontal, "Data");
     model->setHeaderData(5, Qt::Horizontal, "Opis");
     ui->tableView->horizontalHeader()->setStretchLastSection(true);
-
+    connect(ui->btnDelete, &QPushButton::clicked, this, &MainWindow::onbtnDeleteclicked);
     ui->stackedWidget->setCurrentWidget(dashboardWidget);
 }
 
@@ -133,139 +145,25 @@ void MainWindow::refreshTable()
 
 void MainWindow::updateChart()
 {
-    mainChart->removeAllSeries();
-    for (auto axis : mainChart->axes()) {
-        mainChart->removeAxis(axis);
+    if (chartManager && model){
+        chartManager->updateMainChart(model);
     }
-
-    QSqlQuery queryIncome;
-    queryIncome.exec("SELECT SUM(t.amount) "
-                     "FROM transactions t "
-                     "JOIN categories c ON t.category_id = c.id "
-                     "WHERE c.type = 'Przychód'");
-
-    double totalIncome = 0;
-    if (queryIncome.next()) {
-        totalIncome = queryIncome.value(0).toDouble();
-    }
-
-    QSqlQuery queryExpense;
-    queryExpense.exec("SELECT SUM(t.amount) "
-                      "FROM transactions t "
-                      "JOIN categories c ON t.category_id = c.id "
-                      "WHERE c.type = 'Wydatek'");
-
-    double totalExpense = 0;
-    if (queryExpense.next()) {
-        totalExpense = queryExpense.value(0).toDouble();
-    }
-
-    QBarSet *incomeSet = new QBarSet("Przychody");
-    QBarSet *expenseSet = new QBarSet("Wydatki");
-
-    incomeSet->setColor(QColor("#2ecc71"));
-    expenseSet->setColor(QColor("#e74c3c"));
-    //TO NIE JEST BŁĄD ALE ZAWSZE MOŻNA TAK OGARNĄĆ ABY TEGO NIE BYŁO
-
-    *incomeSet << totalIncome;
-    *expenseSet << totalExpense;
-
-    QBarSeries *barSeries = new QBarSeries();
-    barSeries->append(incomeSet);
-    barSeries->append(expenseSet);
-
-    mainChart->addSeries(barSeries);
-    mainChart->setTitle("Całkowity Bilans");
-
-    QBarCategoryAxis *axisX = new QBarCategoryAxis();
-    axisX->append("Bilans");
-    mainChart->addAxis(axisX, Qt::AlignBottom);
-    barSeries->attachAxis(axisX);
-
-    QValueAxis *axisY = new QValueAxis();
-    double maxVal = std::max(totalIncome, totalExpense);
-    axisY->setRange(0, maxVal * 1.2);
-    axisY->setTitleText("Kwota w zł");
-    mainChart->addAxis(axisY, Qt::AlignLeft);
-    barSeries->attachAxis(axisY);
 }
+
 
 void MainWindow::updateExpenseChart()
 {
-    mainChart->removeAllSeries();
-    for (auto axis : mainChart->axes()) {
-        mainChart->removeAxis(axis);
+    if (chartManager) {
+        chartManager->updateExpenseChart();
     }
-
-    QPieSeries *pieSeries = new QPieSeries();
-    pieSeries->setPieSize(0.7);
-
-    QSqlQuery query;
-    query.exec("SELECT c.name, SUM(t.amount) as total "
-               "FROM transactions t "
-               "JOIN categories c ON t.category_id = c.id "
-               "WHERE c.type = 'Wydatek' "
-               "GROUP BY c.id "
-               "ORDER BY total DESC "
-               "LIMIT 5");
-
-    while (query.next()) {
-        QString categoryName = query.value(0).toString();
-        double amount = query.value(1).toDouble();
-        pieSeries->append(categoryName, amount);
-    }
-
-    pieSeries->setLabelsVisible(true);
-    for(QPieSlice *slice : pieSeries->slices()) {
-        slice->setLabel(QString("%1: %2 zł").arg(slice->label()).arg(slice->value()));
-        slice->setLabelPosition(QPieSlice::LabelOutside);
-        if (slice->percentage() < 0.05) {
-            slice->setLabelVisible(false);
-        }
-    }
-
-    mainChart->addSeries(pieSeries);
-    mainChart->setTitle("Top 5 Wydatków wg Kategorii");
 }
 
 void MainWindow::updateIncomeChart()
 {
-    mainChart->removeAllSeries();
-    for (auto axis : mainChart->axes()) {
-        mainChart->removeAxis(axis);
+    if (chartManager) {
+        chartManager->updateIncomeChart();
     }
-
-    QPieSeries *pieSeries = new QPieSeries();
-    pieSeries->setPieSize(0.7);
-
-    QSqlQuery query;
-    query.exec("SELECT c.name, SUM(t.amount) as total "
-               "FROM transactions t "
-               "JOIN categories c ON t.category_id = c.id "
-               "WHERE c.type = 'Przychód' "
-               "GROUP BY c.id "
-               "ORDER BY total DESC "
-               "LIMIT 5");
-
-    while (query.next()) {
-        QString categoryName = query.value(0).toString();
-        double amount = query.value(1).toDouble();
-        pieSeries->append(categoryName, amount);
-    }
-
-    pieSeries->setLabelsVisible(true);
-    for(QPieSlice *slice : pieSeries->slices()) {
-        slice->setLabel(QString("%1: %2 zł").arg(slice->label()).arg(slice->value()));
-        slice->setLabelPosition(QPieSlice::LabelOutside);
-        if (slice->percentage() < 0.05) {
-            slice->setLabelVisible(false);
-        }
-    }
-
-    mainChart->addSeries(pieSeries);
-    mainChart->setTitle("Top 5 Przychodów wg Kategorii");
 }
-
 void MainWindow::on_pushButton_clicked()
 {
     mainChart->setAnimationOptions(QChart::NoAnimation);
@@ -281,5 +179,32 @@ void MainWindow::on_pushButton_2_clicked()
 void MainWindow::on_pushButton_3_clicked()
 {
     ui->stackedWidget->setCurrentWidget(dashboardWidget);
+}
+void MainWindow::onbtnDeleteclicked() {
+    // 1. Sprawdzamy, czy tabela ma zaznaczony wiersz
+    QModelIndex currentIndex = ui->tableView->currentIndex();
+    if (!currentIndex.isValid()) {
+        QMessageBox::warning(this, "Uwaga", "Wybierz wiersz do usunięcia!");
+        return;
+    }
+
+    if (ui->tableView->model() == transactionModel) {
+        transactionModel->removeRow(currentIndex.row());
+        transactionModel->submitAll();
+        transactionModel->select();
+    }
+
+    else {
+        int id = model->data(model->index(currentIndex.row(), 0)).toInt();
+        QSqlQuery query;
+        query.prepare("DELETE FROM transactions WHERE id = :id");
+        query.bindValue(":id", id);
+
+        if (query.exec()) {
+            refreshTable();
+        } else {
+            QMessageBox::critical(this, "Błąd", "Nie udało się usunąć zapisu z bazy.");
+        }
+    }
 }
 // MOŻNA ROZDZIELIĆ TE WYKRESY NA OSOBNĄ KLASĘ

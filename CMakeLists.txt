@@ -14,6 +14,7 @@ qt_add_executable(FinanceManager
     mainwindow.ui
     source/AddTransaction.h source/AddTransaction.cpp source/AddTransaction.ui
     source/AddCategory.h source/AddCategory.cpp source/AddCategory.ui
+    financechartmanager.h financechartmanager.cpp
 )
 
 # Dodane linkowanie biblioteki Charts

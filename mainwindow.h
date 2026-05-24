@@ -2,7 +2,10 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QtCharts/Qchart>
 #include <QSqlQueryModel>
+#include <QModelIndex>
+#include <QSqlTableModel>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -10,7 +13,7 @@ QT_END_NAMESPACE
 
 class AddTransaction;
 class AddCategory;
-class QChart;
+class FinanceChartManager;
 
 class MainWindow : public QMainWindow
 {
@@ -30,10 +33,14 @@ private slots:
     void on_pushButton_clicked();
     void on_pushButton_2_clicked();
     void on_pushButton_3_clicked();
+    void onbtnDeleteclicked();
 
 private:
+    QSqlTableModel *transactionModel;
     Ui::MainWindow *ui;
     QSqlQueryModel *model;
+
+    FinanceChartManager *chartManager;
 
     QWidget *dashboardWidget;
     AddTransaction *addTransWidget;
