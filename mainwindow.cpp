@@ -3,18 +3,18 @@
 #include "ui_mainwindow.h"
 #include "source/AddTransaction.h"
 #include "source/AddCategory.h"
+#include "edittransactiondialog.h"
 
 #include <QStandardPaths>
 #include <QDir>
-
+#include <QTableWidget>
+#include <QMessageBox>
+#include <QInputDialog>
 #include <QSqlDatabase>
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QSqlQueryModel>
-#include <QDir>
-#include <QMessageBox>
 #include <QHeaderView>
-
 #include <QChartView>
 #include <QBarSeries>
 #include <QBarSet>
@@ -33,22 +33,21 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
     resize(1200, 800);
-
+    ui->tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui->tableView->setSelectionMode(QAbstractItemView::SingleSelection);
     currentChartMode = 1;
 
     QDir dir;
     if (!dir.exists("databases")) dir.mkpath("databases");
 
     QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
-    QString path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    QDir().mkpath(path);
-    db.setDatabaseName(path + "/finances.db");
+    db.setDatabaseName("C:/Users/macie/Documents/FinanceManager/databases/finances.db");
 
     if (!db.open()) {
-
         QMessageBox::critical(this, "Błąd", "Nie udało się połączyć: " + db.lastError().text());
         return;
     }
+
     transactionModel = new QSqlTableModel(this);
     transactionModel->setTable("transactions");
     transactionModel->setEditStrategy(QSqlTableModel::OnManualSubmit);
@@ -87,8 +86,6 @@ MainWindow::MainWindow(QWidget *parent)
         updateIncomeChart();
     });
 
-
-
     QChartView *chartView = new QChartView(this);
     chartManager = new FinanceChartManager(chartView);
     mainChart = chartView->chart();
@@ -109,8 +106,13 @@ MainWindow::MainWindow(QWidget *parent)
     model = new QSqlQueryModel(this);
     refreshTable();
 
-    ui->tableView->setModel(model);
+    proxyModel = new QSortFilterProxyModel(this);
+    proxyModel->setSourceModel(model);
+    proxyModel->setFilterKeyColumn(-1);
+
+    ui->tableView->setModel(proxyModel);
     ui->tableView->hideColumn(0);
+    ui->tableView->hideColumn(6);
     ui->tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
     ui->tableView->setSelectionMode(QAbstractItemView::SingleSelection);
     model->setHeaderData(1, Qt::Horizontal, "Kwota");
@@ -118,38 +120,19 @@ MainWindow::MainWindow(QWidget *parent)
     model->setHeaderData(3, Qt::Horizontal, "Kategoria");
     model->setHeaderData(4, Qt::Horizontal, "Data");
     model->setHeaderData(5, Qt::Horizontal, "Opis");
-    ui->tableView->horizontalHeader()->setStretchLastSection(true);
+
+    ui->tableView->setColumnWidth(3, 220);
+    ui->tableView->horizontalHeader()->setSectionResizeMode(5, QHeaderView::Stretch);
+
     connect(ui->btnDelete, &QPushButton::clicked, this, &MainWindow::onbtnDeleteclicked);
     ui->stackedWidget->setCurrentWidget(dashboardWidget);
+    connect(ui->lineEditFilter, &QLineEdit::textChanged, proxyModel, &QSortFilterProxyModel::setFilterFixedString);
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
 }
-
-void MainWindow::refreshTable()
-{
-    model->setQuery("SELECT t.id, t.amount, c.type, c.name, t.date, t.description "
-                    "FROM transactions t "
-                    "LEFT JOIN categories c ON t.category_id = c.id");
-
-    if (currentChartMode == 1) {
-        updateChart();
-    } else if (currentChartMode == 2) {
-        updateExpenseChart();
-    } else if (currentChartMode == 3) {
-        updateIncomeChart();
-    }
-}
-
-void MainWindow::updateChart()
-{
-    if (chartManager && model){
-        chartManager->updateMainChart(model);
-    }
-}
-
 
 void MainWindow::updateExpenseChart()
 {
@@ -164,6 +147,7 @@ void MainWindow::updateIncomeChart()
         chartManager->updateIncomeChart();
     }
 }
+
 void MainWindow::on_pushButton_clicked()
 {
     mainChart->setAnimationOptions(QChart::NoAnimation);
@@ -180,8 +164,9 @@ void MainWindow::on_pushButton_3_clicked()
 {
     ui->stackedWidget->setCurrentWidget(dashboardWidget);
 }
+
 void MainWindow::onbtnDeleteclicked() {
-    // 1. Sprawdzamy, czy tabela ma zaznaczony wiersz
+
     QModelIndex currentIndex = ui->tableView->currentIndex();
     if (!currentIndex.isValid()) {
         QMessageBox::warning(this, "Uwaga", "Wybierz wiersz do usunięcia!");
@@ -193,7 +178,6 @@ void MainWindow::onbtnDeleteclicked() {
         transactionModel->submitAll();
         transactionModel->select();
     }
-
     else {
         int id = model->data(model->index(currentIndex.row(), 0)).toInt();
         QSqlQuery query;
@@ -205,6 +189,108 @@ void MainWindow::onbtnDeleteclicked() {
         } else {
             QMessageBox::critical(this, "Błąd", "Nie udało się usunąć zapisu z bazy.");
         }
+        QModelIndex proxyIndex = ui->tableView->currentIndex();
+        if (!proxyIndex.isValid()) {
+            return;
+        }
+
+        QModelIndex sourceIndex = proxyModel->mapToSource(proxyIndex);
+        int row = sourceIndex.row();
+
+        id = model->data(model->index(row, 0)).toInt();
+        double amount = model->data(model->index(row, 1)).toDouble();
+        QString dateStr = model->data(model->index(row, 4)).toString();
+        QString desc = model->data(model->index(row, 5)).toString();
+        int catId = model->data(model->index(row, 6)).toInt();
+
+        EditTransactionDialog dialog(this);
+        dialog.loadCategories();
+        dialog.setTransactionData(amount, QDate::fromString(dateStr, "yyyy-MM-dd"), desc, catId);
+
+        if (dialog.exec() == QDialog::Accepted) {
+            QSqlQuery query;
+            query.prepare("UPDATE transactions SET amount = :amt, date = :date, "
+                          "category_id = :cat, description = :desc WHERE id = :id");
+            query.bindValue(":amt", dialog.getAmount());
+            query.bindValue(":date", dialog.getDate().toString("yyyy-MM-dd"));
+            query.bindValue(":cat", dialog.getSelectedCategoryId());
+            query.bindValue(":desc", dialog.getDescription());
+            query.bindValue(":id", id);
+
+            if (query.exec()) {
+                refreshTable();
+            } else {
+                QMessageBox::critical(this, "Błąd", "Nie udało się zaktualizować danych.");
+            }
+        }
     }
 }
-// MOŻNA ROZDZIELIĆ TE WYKRESY NA OSOBNĄ KLASĘ
+
+void MainWindow::on_btnEdit_clicked()
+{
+    QModelIndex proxyIndex = ui->tableView->currentIndex();
+    if (!proxyIndex.isValid()) {
+        QMessageBox::warning(this, "Uwaga", "Wybierz wiersz do edycji!");
+        return;
+    }
+
+    QModelIndex sourceIndex = proxyModel->mapToSource(proxyIndex);
+    int row = sourceIndex.row();
+
+    int id = model->data(model->index(row, 0)).toInt();
+    double amount = model->data(model->index(row, 1)).toDouble();
+    QString dateStr = model->data(model->index(row, 4)).toString();
+    QString desc = model->data(model->index(row, 5)).toString();
+    int catId = model->data(model->index(row, 6)).toInt();
+
+    EditTransactionDialog dialog(this);
+    dialog.loadCategories();
+    dialog.setTransactionData(amount, QDate::fromString(dateStr, "yyyy-MM-dd"), desc, catId);
+
+    if (dialog.exec() == QDialog::Accepted) {
+        QSqlQuery query;
+        query.prepare("UPDATE transactions SET amount = :amt, date = :date, "
+                      "category_id = :cat, description = :desc WHERE id = :id");
+        query.bindValue(":amt", dialog.getAmount());
+        query.bindValue(":date", dialog.getDate().toString("yyyy-MM-dd"));
+        query.bindValue(":cat", dialog.getSelectedCategoryId());
+        query.bindValue(":desc", dialog.getDescription());
+        query.bindValue(":id", id);
+
+        if (query.exec()) {
+            refreshTable();
+            QMessageBox::information(this, "Sukces", "Dane zostały pomyślnie zaktualizowane!");
+        } else {
+            QMessageBox::critical(this, "Błąd", "Nie udało się zaktualizować danych.");
+        }
+    }
+}
+
+double MainWindow::calculateBalance()
+{
+    QSqlQuery query("SELECT SUM(CASE WHEN c.type = 'Przychód' THEN t.amount ELSE -t.amount END) "
+                    "FROM transactions t "
+                    "LEFT JOIN categories c ON t.category_id = c.id");
+
+    if (query.next()) {
+        return query.value(0).toDouble();
+    }
+    return 0.0;
+}
+
+void MainWindow::refreshTable()
+{
+    double balance = calculateBalance();
+    model->setQuery("SELECT t.id, t.amount, c.type, c.name, t.date, t.description, t.category_id "
+                    "FROM transactions t "
+                    "LEFT JOIN categories c ON t.category_id = c.id");
+
+    QString color = (balance >= 0) ? "green" : "red";
+    ui->lblBalance->setText(QString("<b style='color:%1;'>Saldo: %2 zł</b>").arg(color).arg(balance, 0, 'f', 2));
+}
+
+void MainWindow::updateChart() {
+    if (chartManager && model){
+        chartManager->updateMainChart(model);
+    }
+}

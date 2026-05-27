@@ -28,6 +28,9 @@ FinanceChartManager::~FinanceChartManager()
 void FinanceChartManager::updateMainChart(QSqlQueryModel *model)
 {
     m_chart->removeAllSeries();
+    for (auto axis : m_chart->axes()) {
+        m_chart->removeAxis(axis);
+    }
 
     QBarSet *setPrzychody = new QBarSet("Przychody");
     QBarSet *setWydatki = new QBarSet("Wydatki");
@@ -70,6 +73,7 @@ void FinanceChartManager::updateMainChart(QSqlQueryModel *model)
     axisY->setTitleText("Kwota w zł");
     m_chart->setAxisY(axisY, series);
 }
+
 void FinanceChartManager::updateExpenseChart()
 {
     if (!m_chart) return;

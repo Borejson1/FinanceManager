@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.19)
 project(FinanceManager LANGUAGES CXX)
 
-# Połączone moduły w jednym wywołaniu + dodane Charts
 find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets Sql Charts)
 
 qt_standard_project_setup()
@@ -14,10 +13,10 @@ qt_add_executable(FinanceManager
     mainwindow.ui
     source/AddTransaction.h source/AddTransaction.cpp source/AddTransaction.ui
     source/AddCategory.h source/AddCategory.cpp source/AddCategory.ui
+    edittransactiondialog.h edittransactiondialog.cpp edittransactiondialog.ui
     financechartmanager.h financechartmanager.cpp
 )
 
-# Dodane linkowanie biblioteki Charts
 target_link_libraries(FinanceManager
     PRIVATE
         Qt6::Core

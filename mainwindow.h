@@ -6,6 +6,7 @@
 #include <QSqlQueryModel>
 #include <QModelIndex>
 #include <QSqlTableModel>
+#include <QSortFilterProxyModel>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -34,11 +35,13 @@ private slots:
     void on_pushButton_2_clicked();
     void on_pushButton_3_clicked();
     void onbtnDeleteclicked();
-
+    void on_btnEdit_clicked();
+    double calculateBalance();
 private:
     QSqlTableModel *transactionModel;
     Ui::MainWindow *ui;
     QSqlQueryModel *model;
+    QSortFilterProxyModel *proxyModel;
 
     FinanceChartManager *chartManager;
 
