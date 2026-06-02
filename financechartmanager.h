@@ -14,6 +14,8 @@ void updateIncomeChart();
 class FinanceChartManager
 {
 public:
+    void updateMonthlySummaryChart();
+    void updateYearlySummaryChart();
 
     FinanceChartManager(QChartView *chartView);
     ~FinanceChartManager();

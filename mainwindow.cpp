@@ -5,7 +5,7 @@
 #include "source/AddCategory.h"
 #include "edittransactiondialog.h"
 
-#include <QStandardPaths>
+#include <QCoreApplication>
 #include <QDir>
 #include <QTableWidget>
 #include <QMessageBox>
@@ -14,6 +14,7 @@
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QSqlQueryModel>
+#include <QSortFilterProxyModel>
 #include <QHeaderView>
 #include <QChartView>
 #include <QBarSeries>
@@ -26,6 +27,7 @@
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QPushButton>
+#include <QFile>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
@@ -37,11 +39,25 @@ MainWindow::MainWindow(QWidget *parent)
     ui->tableView->setSelectionMode(QAbstractItemView::SingleSelection);
     currentChartMode = 1;
 
-    QDir dir;
-    if (!dir.exists("databases")) dir.mkpath("databases");
+    QString appPath = QCoreApplication::applicationDirPath();
+    QDir dir(appPath);
+
+    if (!dir.exists("databases")) {
+        dir.mkpath("databases");
+    }
+
+    QString localDbPath = dir.absoluteFilePath("databases/finances.db");
+    QString oldDbPath = "C:/Users/macie/Documents/FinanceManager/databases/finances.db";
+
+    if (!QFile::exists(localDbPath)) {
+        if (QFile::exists(oldDbPath)) {
+            QFile::copy(oldDbPath, localDbPath);
+            QFile::setPermissions(localDbPath, QFileDevice::ReadOwner | QFileDevice::WriteOwner);
+        }
+    }
 
     QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
-    db.setDatabaseName("C:/Users/macie/Documents/FinanceManager/databases/finances.db");
+    db.setDatabaseName(localDbPath);
 
     if (!db.open()) {
         QMessageBox::critical(this, "Błąd", "Nie udało się połączyć: " + db.lastError().text());
@@ -65,10 +81,14 @@ MainWindow::MainWindow(QWidget *parent)
     QPushButton *btnChart1 = new QPushButton("Całkowity Bilans", this);
     QPushButton *btnChart2 = new QPushButton("Wydatki wg Kategorii", this);
     QPushButton *btnChart3 = new QPushButton("Przychody wg Kategorii", this);
+    QPushButton *btnChart4 = new QPushButton("Podsumowanie Miesięczne", this);
+    QPushButton *btnChart5 = new QPushButton("Podsumowanie Roczne", this);
 
     chartMenuLayout->addWidget(btnChart1);
     chartMenuLayout->addWidget(btnChart2);
     chartMenuLayout->addWidget(btnChart3);
+    chartMenuLayout->addWidget(btnChart4);
+    chartMenuLayout->addWidget(btnChart5);
     chartMenuLayout->addStretch();
 
     connect(btnChart1, &QPushButton::clicked, this, [this]() {
@@ -84,6 +104,16 @@ MainWindow::MainWindow(QWidget *parent)
     connect(btnChart3, &QPushButton::clicked, this, [this]() {
         currentChartMode = 3;
         updateIncomeChart();
+    });
+
+    connect(btnChart4, &QPushButton::clicked, this, [this]() {
+        currentChartMode = 4;
+        if (chartManager) chartManager->updateMonthlySummaryChart();
+    });
+
+    connect(btnChart5, &QPushButton::clicked, this, [this]() {
+        currentChartMode = 5;
+        if (chartManager) chartManager->updateYearlySummaryChart();
     });
 
     QChartView *chartView = new QChartView(this);
@@ -109,6 +139,7 @@ MainWindow::MainWindow(QWidget *parent)
     proxyModel = new QSortFilterProxyModel(this);
     proxyModel->setSourceModel(model);
     proxyModel->setFilterKeyColumn(-1);
+    proxyModel->setFilterCaseSensitivity(Qt::CaseInsensitive);
 
     ui->tableView->setModel(proxyModel);
     ui->tableView->hideColumn(0);
@@ -127,6 +158,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->btnDelete, &QPushButton::clicked, this, &MainWindow::onbtnDeleteclicked);
     ui->stackedWidget->setCurrentWidget(dashboardWidget);
     connect(ui->lineEditFilter, &QLineEdit::textChanged, proxyModel, &QSortFilterProxyModel::setFilterFixedString);
+
+    updateChart();
 }
 
 MainWindow::~MainWindow()
@@ -179,7 +212,9 @@ void MainWindow::onbtnDeleteclicked() {
         transactionModel->select();
     }
     else {
-        int id = model->data(model->index(currentIndex.row(), 0)).toInt();
+        QModelIndex sourceIndex = proxyModel->mapToSource(currentIndex);
+        int id = model->data(model->index(sourceIndex.row(), 0)).toInt();
+
         QSqlQuery query;
         query.prepare("DELETE FROM transactions WHERE id = :id");
         query.bindValue(":id", id);
@@ -189,12 +224,13 @@ void MainWindow::onbtnDeleteclicked() {
         } else {
             QMessageBox::critical(this, "Błąd", "Nie udało się usunąć zapisu z bazy.");
         }
+
         QModelIndex proxyIndex = ui->tableView->currentIndex();
         if (!proxyIndex.isValid()) {
             return;
         }
 
-        QModelIndex sourceIndex = proxyModel->mapToSource(proxyIndex);
+        sourceIndex = proxyModel->mapToSource(proxyIndex);
         int row = sourceIndex.row();
 
         id = model->data(model->index(row, 0)).toInt();

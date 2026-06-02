@@ -4,6 +4,7 @@
 
 EditTransactionDialog::EditTransactionDialog(QWidget *parent) : QDialog(parent), ui(new Ui::EditTransactionDialog) {
     ui->setupUi(this);
+    ui->comboCategory->setMaxVisibleItems(4);
     connect(ui->buttonBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 }
@@ -25,16 +26,21 @@ void EditTransactionDialog::setTransactionData(double amount, QDate date, QStrin
 }
 
 double EditTransactionDialog::getAmount() const {
-    return
-        ui->spinAmount->value(); }
-QDate EditTransactionDialog::getDate() const {
-    return
-        ui->dateEdit->date(); }
-QString EditTransactionDialog::getDescription() const {
-    return
-        ui->editDescription->text(); }
-int EditTransactionDialog::getSelectedCategoryId() const {
-    return
-        ui->comboCategory->currentData().toInt(); }
+    return ui->spinAmount->value();
+}
 
-EditTransactionDialog::~EditTransactionDialog() { delete ui; }
+QDate EditTransactionDialog::getDate() const {
+    return ui->dateEdit->date();
+}
+
+QString EditTransactionDialog::getDescription() const {
+    return ui->editDescription->text();
+}
+
+int EditTransactionDialog::getSelectedCategoryId() const {
+    return ui->comboCategory->currentData().toInt();
+}
+
+EditTransactionDialog::~EditTransactionDialog() {
+    delete ui;
+}
