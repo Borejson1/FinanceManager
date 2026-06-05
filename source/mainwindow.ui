@@ -18,26 +18,27 @@
 QMainWindow {
     background-color: #f5f6fa;
 }
-QTableView {
-    background-color: #ffffff;
-    border: 1px solid #dcdde1;
-    border-radius: 4px;
-    gridline-color: #e8e8e8;
-    selection-background-color: #a4b0be;
-    selection-color: black;
-}
-QHeaderView::section {
-    background-color: #f1f2f6;
+QWidget {
     color: #2f3542;
-    padding: 6px;
-    border: none;
-    border-right: 1px solid #dcdde1;
-    border-bottom: 1px solid #dcdde1;
+}
+QLabel {
     font-weight: bold;
+    font-size: 13px;
+    background: transparent;
+}
+QLineEdit {
+    background-color: #ffffff;
+    border: 1px solid #ced6e0;
+    border-radius: 5px;
+    padding: 6px 12px;
+    font-size: 13px;
+}
+QLineEdit:focus {
+    border: 1px solid #747d8c;
+    background-color: #fcfcfd;
 }
 QPushButton {
     background-color: #dfe4ea;
-    color: #2f3542;
     border: 1px solid #ced6e0;
     border-radius: 5px;
     padding: 10px 15px;
@@ -46,9 +47,73 @@ QPushButton {
 }
 QPushButton:hover {
     background-color: #ced6e0;
+    border: 1px solid #a4b0be;
 }
 QPushButton:pressed {
     background-color: #a4b0be;
+    color: #ffffff;
+}
+QTableView {
+    background-color: #ffffff;
+    border: 1px solid #ced6e0;
+    border-radius: 5px;
+    gridline-color: #e8e8e8;
+    selection-background-color: #a4b0be;
+    selection-color: white;
+}
+QHeaderView::section {
+    background-color: #f1f2f6;
+    padding: 8px;
+    border: none;
+    border-right: 1px solid #ced6e0;
+    border-bottom: 1px solid #ced6e0;
+    font-weight: bold;
+}
+#chartContainer {
+    background-color: #ffffff;
+    border: 1px solid #ced6e0;
+    border-radius: 6px;
+}
+#mainChartView {
+    background: transparent;
+    border: none;
+}
+#lblFixedCosts, #lblOneTimeCosts {
+    color: #2c3e50;
+    margin-top: 5px;
+    margin-left: 10px;
+}
+#spinYear {
+    border: 1px solid #ced6e0;
+    border-radius: 5px;
+    background-color: #ffffff;
+    font-weight: bold;
+    font-size: 13px;
+    padding-right: 20px;
+    selection-background-color: transparent;
+    selection-color: #2f3542;
+}
+#spinYear:focus {
+    border: 1px solid #747d8c;
+}
+#spinYear::up-button {
+    subcontrol-origin: border;
+    subcontrol-position: top right;
+    width: 22px;
+    background: #dfe4ea;
+    border-left: 1px solid #ced6e0;
+    border-top-right-radius: 4px;
+}
+#spinYear::down-button {
+    subcontrol-origin: border;
+    subcontrol-position: bottom right;
+    width: 22px;
+    background: #dfe4ea;
+    border-left: 1px solid #ced6e0;
+    border-bottom-right-radius: 4px;
+}
+#spinYear::up-button:hover, #spinYear::down-button:hover {
+    background-color: #ced6e0;
 }
    </string>
   </property>

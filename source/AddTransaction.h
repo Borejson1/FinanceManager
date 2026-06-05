@@ -22,7 +22,7 @@ signals:
 
 private slots:
     void on_pushButton_clicked();
-    void on_editDate_textEdited(const QString &text);
+
 
 private:
     Ui::AddTransaction *ui;

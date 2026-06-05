@@ -7,6 +7,10 @@
 #include <QModelIndex>
 #include <QSqlTableModel>
 #include <QSortFilterProxyModel>
+#include <QLabel>
+#include <QPushButton>
+#include <QSpinBox>
+#include <QScrollBar>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -40,6 +44,7 @@ private slots:
 private:
     QSqlTableModel *transactionModel;
     Ui::MainWindow *ui;
+    QSpinBox *spinYear;
     QSqlQueryModel *model;
     QSortFilterProxyModel *proxyModel;
 
@@ -51,5 +56,12 @@ private:
 
     QChart *mainChart;
     int currentChartMode;
+
+    QLabel *lblFixedCosts;
+    QLabel *lblOneTimeCosts;
+    void updateFixedOneTimeCosts();
+    QPushButton *btnFixedVariableView;
+    QScrollBar *yearScrollBar;
+    void updateFixedVariableChart();
 };
 #endif

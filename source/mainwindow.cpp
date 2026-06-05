@@ -1,8 +1,8 @@
 #include "mainwindow.h"
 #include "financechartmanager.h"
 #include "ui_mainwindow.h"
-#include "source/AddTransaction.h"
-#include "source/AddCategory.h"
+#include "AddTransaction.h"
+#include "AddCategory.h"
 #include "edittransactiondialog.h"
 
 #include <QCoreApplication>
@@ -34,30 +34,17 @@ MainWindow::MainWindow(QWidget *parent)
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+
     resize(1200, 800);
     ui->tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
     ui->tableView->setSelectionMode(QAbstractItemView::SingleSelection);
+    ui->tableView->setSortingEnabled(true);
     currentChartMode = 1;
 
-    QString appPath = QCoreApplication::applicationDirPath();
-    QDir dir(appPath);
-
-    if (!dir.exists("databases")) {
-        dir.mkpath("databases");
-    }
-
-    QString localDbPath = dir.absoluteFilePath("databases/finances.db");
-    QString oldDbPath = "C:/Users/macie/Documents/FinanceManager/databases/finances.db";
-
-    if (!QFile::exists(localDbPath)) {
-        if (QFile::exists(oldDbPath)) {
-            QFile::copy(oldDbPath, localDbPath);
-            QFile::setPermissions(localDbPath, QFileDevice::ReadOwner | QFileDevice::WriteOwner);
-        }
-    }
+    QString dbPath = "C:/Users/macie/Documents/FinanceManager/databases/finances.db";
 
     QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
-    db.setDatabaseName(localDbPath);
+    db.setDatabaseName(dbPath);
 
     if (!db.open()) {
         QMessageBox::critical(this, "Błąd", "Nie udało się połączyć: " + db.lastError().text());
@@ -73,56 +60,126 @@ MainWindow::MainWindow(QWidget *parent)
     QSqlQuery query;
     query.exec("CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, type TEXT NOT NULL)");
     query.exec("CREATE TABLE IF NOT EXISTS transactions (id INTEGER PRIMARY KEY AUTOINCREMENT, amount REAL NOT NULL, date TEXT NOT NULL, description TEXT, category_id INTEGER, created_at TEXT)");
+    query.exec("ALTER TABLE transactions ADD COLUMN is_fixed INTEGER DEFAULT 0");
 
     dashboardWidget = new QWidget(this);
     QHBoxLayout *dashboardLayout = new QHBoxLayout(dashboardWidget);
 
     QVBoxLayout *chartMenuLayout = new QVBoxLayout();
+    chartMenuLayout->setSpacing(10);
+    chartMenuLayout->setAlignment(Qt::AlignTop);
+
     QPushButton *btnChart1 = new QPushButton("Całkowity Bilans", this);
     QPushButton *btnChart2 = new QPushButton("Wydatki wg Kategorii", this);
     QPushButton *btnChart3 = new QPushButton("Przychody wg Kategorii", this);
     QPushButton *btnChart4 = new QPushButton("Podsumowanie Miesięczne", this);
     QPushButton *btnChart5 = new QPushButton("Podsumowanie Roczne", this);
+    btnFixedVariableView = new QPushButton("Koszty Stałe / Zmienne", this);
 
     chartMenuLayout->addWidget(btnChart1);
     chartMenuLayout->addWidget(btnChart2);
     chartMenuLayout->addWidget(btnChart3);
     chartMenuLayout->addWidget(btnChart4);
     chartMenuLayout->addWidget(btnChart5);
+    chartMenuLayout->addWidget(btnFixedVariableView);
     chartMenuLayout->addStretch();
 
+    spinYear = new QSpinBox(this);
+    spinYear->setObjectName("spinYear");
+    spinYear->setRange(2000, 2026);
+    int currentY = QDate::currentDate().year();
+    spinYear->setValue(currentY > 2026 ? 2026 : currentY);
+    spinYear->setMaximumWidth(90);
+    spinYear->setMinimumHeight(30);
+    spinYear->setAlignment(Qt::AlignCenter);
+    spinYear->hide();
+
+    yearScrollBar = new QScrollBar(Qt::Horizontal, this);
+    yearScrollBar->hide();
+
+    QFrame *chartContainer = new QFrame(this);
+    chartContainer->setObjectName("chartContainer");
+
+    QVBoxLayout *containerLayout = new QVBoxLayout(chartContainer);
+    containerLayout->setContentsMargins(15, 15, 15, 15);
+
+    QChartView *chartView = new QChartView(this);
+    chartView->setObjectName("mainChartView");
+    chartManager = new FinanceChartManager(chartView);
+    mainChart = chartView->chart();
+    mainChart->setBackgroundVisible(false);
+
+    containerLayout->addWidget(chartView);
+
+    QVBoxLayout *chartRightLayout = new QVBoxLayout();
+    chartRightLayout->addWidget(chartContainer);
+
+    lblFixedCosts = new QLabel("Koszty stałe (bieżący rok): 0.00 zł", this);
+    lblOneTimeCosts = new QLabel("Koszty jednorazowe (bieżący rok): 0.00 zł", this);
+
+    lblFixedCosts->setObjectName("lblFixedCosts");
+    lblOneTimeCosts->setObjectName("lblOneTimeCosts");
+
+    QHBoxLayout *costsSummaryLayout = new QHBoxLayout();
+    costsSummaryLayout->addWidget(spinYear);
+    costsSummaryLayout->addWidget(lblFixedCosts);
+    costsSummaryLayout->addWidget(lblOneTimeCosts);
+    costsSummaryLayout->addStretch();
+    chartRightLayout->addLayout(costsSummaryLayout);
+
+    lblFixedCosts->hide();
+    lblOneTimeCosts->hide();
+
     connect(btnChart1, &QPushButton::clicked, this, [this]() {
-        currentChartMode = 1;
+        currentChartMode = 1; spinYear->hide();
+        lblFixedCosts->hide(); lblOneTimeCosts->hide();
         updateChart();
     });
 
     connect(btnChart2, &QPushButton::clicked, this, [this]() {
-        currentChartMode = 2;
+        currentChartMode = 2; spinYear->hide();
+        lblFixedCosts->hide(); lblOneTimeCosts->hide();
         updateExpenseChart();
     });
 
     connect(btnChart3, &QPushButton::clicked, this, [this]() {
-        currentChartMode = 3;
+        currentChartMode = 3; spinYear->hide();
+        lblFixedCosts->hide(); lblOneTimeCosts->hide();
         updateIncomeChart();
     });
 
     connect(btnChart4, &QPushButton::clicked, this, [this]() {
-        currentChartMode = 4;
+        currentChartMode = 4; spinYear->hide();
+        lblFixedCosts->hide(); lblOneTimeCosts->hide();
         if (chartManager) chartManager->updateMonthlySummaryChart();
     });
 
     connect(btnChart5, &QPushButton::clicked, this, [this]() {
         currentChartMode = 5;
+        spinYear->hide();
+        lblFixedCosts->hide();
+        lblOneTimeCosts->hide();
         if (chartManager) chartManager->updateYearlySummaryChart();
     });
 
-    QChartView *chartView = new QChartView(this);
-    chartManager = new FinanceChartManager(chartView);
-    mainChart = chartView->chart();
+    connect(btnFixedVariableView, &QPushButton::clicked, this, [this]() {
+        currentChartMode = 6;
+        spinYear->show();
+        lblFixedCosts->show();
+        lblOneTimeCosts->show();
+        updateFixedVariableChart();
+        updateFixedOneTimeCosts();
+    });
+
+    connect(spinYear, &QSpinBox::valueChanged, this, [this]() {
+        if (currentChartMode == 6) {
+            updateFixedVariableChart();
+            updateFixedOneTimeCosts();
+        }
+    });
 
     dashboardLayout->addLayout(chartMenuLayout, 1);
-    dashboardLayout->addWidget(chartView, 4);
-
+    dashboardLayout->addLayout(chartRightLayout, 4);
     ui->stackedWidget->addWidget(dashboardWidget);
 
     addTransWidget = new AddTransaction(this);
@@ -143,17 +200,18 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->tableView->setModel(proxyModel);
     ui->tableView->hideColumn(0);
-    ui->tableView->hideColumn(6);
+    ui->tableView->hideColumn(7);
     ui->tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
     ui->tableView->setSelectionMode(QAbstractItemView::SingleSelection);
     model->setHeaderData(1, Qt::Horizontal, "Kwota");
     model->setHeaderData(2, Qt::Horizontal, "Typ");
     model->setHeaderData(3, Qt::Horizontal, "Kategoria");
     model->setHeaderData(4, Qt::Horizontal, "Data");
-    model->setHeaderData(5, Qt::Horizontal, "Opis");
+    model->setHeaderData(5, Qt::Horizontal, "Rodzaj");
+    model->setHeaderData(6, Qt::Horizontal, "Opis");
 
     ui->tableView->setColumnWidth(3, 220);
-    ui->tableView->horizontalHeader()->setSectionResizeMode(5, QHeaderView::Stretch);
+    ui->tableView->horizontalHeader()->setSectionResizeMode(6, QHeaderView::Stretch);
 
     connect(ui->btnDelete, &QPushButton::clicked, this, &MainWindow::onbtnDeleteclicked);
     ui->stackedWidget->setCurrentWidget(dashboardWidget);
@@ -199,7 +257,6 @@ void MainWindow::on_pushButton_3_clicked()
 }
 
 void MainWindow::onbtnDeleteclicked() {
-
     QModelIndex currentIndex = ui->tableView->currentIndex();
     if (!currentIndex.isValid()) {
         QMessageBox::warning(this, "Uwaga", "Wybierz wiersz do usunięcia!");
@@ -236,8 +293,8 @@ void MainWindow::onbtnDeleteclicked() {
         id = model->data(model->index(row, 0)).toInt();
         double amount = model->data(model->index(row, 1)).toDouble();
         QString dateStr = model->data(model->index(row, 4)).toString();
-        QString desc = model->data(model->index(row, 5)).toString();
-        int catId = model->data(model->index(row, 6)).toInt();
+        QString desc = model->data(model->index(row, 6)).toString();
+        int catId = model->data(model->index(row, 7)).toInt();
 
         EditTransactionDialog dialog(this);
         dialog.loadCategories();
@@ -276,8 +333,8 @@ void MainWindow::on_btnEdit_clicked()
     int id = model->data(model->index(row, 0)).toInt();
     double amount = model->data(model->index(row, 1)).toDouble();
     QString dateStr = model->data(model->index(row, 4)).toString();
-    QString desc = model->data(model->index(row, 5)).toString();
-    int catId = model->data(model->index(row, 6)).toInt();
+    QString desc = model->data(model->index(row, 6)).toString();
+    int catId = model->data(model->index(row, 7)).toInt();
 
     EditTransactionDialog dialog(this);
     dialog.loadCategories();
@@ -317,16 +374,135 @@ double MainWindow::calculateBalance()
 void MainWindow::refreshTable()
 {
     double balance = calculateBalance();
-    model->setQuery("SELECT t.id, t.amount, c.type, c.name, t.date, t.description, t.category_id "
+    model->setQuery("SELECT t.id, t.amount, c.type, c.name, t.date, "
+                    "CASE "
+                    "WHEN t.is_fixed = 1 THEN 'Stały' "
+                    "ELSE 'Jednorazowy' "
+                    "END as rodzaj_kosztu, "
+                    "t.description, t.category_id "
                     "FROM transactions t "
-                    "LEFT JOIN categories c ON t.category_id = c.id");
+                    "LEFT JOIN categories c ON t.category_id = c.id "
+                    "ORDER BY t.date DESC");
 
     QString color = (balance >= 0) ? "green" : "red";
     ui->lblBalance->setText(QString("<b style='color:%1;'>Saldo: %2 zł</b>").arg(color).arg(balance, 0, 'f', 2));
+
+    updateChart();
 }
 
-void MainWindow::updateChart() {
-    if (chartManager && model){
-        chartManager->updateMainChart(model);
+void MainWindow::updateChart()
+{
+    if (!chartManager) return;
+
+    if (mainChart) {
+        mainChart->setAnimationOptions(QChart::SeriesAnimations);
     }
+
+    switch (currentChartMode) {
+    case 1:
+        if (model) chartManager->updateMainChart(model);
+        break;
+    case 2:
+        updateExpenseChart();
+        break;
+    case 3:
+        updateIncomeChart();
+        break;
+    case 4:
+        chartManager->updateMonthlySummaryChart();
+        break;
+    case 5:
+        chartManager->updateYearlySummaryChart();
+        break;
+    case 6:
+        updateFixedVariableChart();
+        break;
+    }
+    updateFixedOneTimeCosts();
+}
+
+void MainWindow::updateFixedOneTimeCosts()
+{
+    int currentYear = spinYear->value();
+    QString yearPattern = QString::number(currentYear) + "-%";
+
+    QSqlQuery queryFixed;
+    queryFixed.prepare("SELECT SUM(t.amount) FROM transactions t "
+                       "LEFT JOIN categories c ON t.category_id = c.id "
+                       "WHERE c.type = 'Wydatek' AND t.date LIKE :year AND t.is_fixed = 1");
+    queryFixed.bindValue(":year", yearPattern);
+
+    double fixedSum = 0.0;
+    if (queryFixed.exec() && queryFixed.next()) {
+        fixedSum = queryFixed.value(0).toDouble();
+    }
+
+    QSqlQuery queryOneTime;
+    queryOneTime.prepare("SELECT SUM(t.amount) FROM transactions t "
+                         "LEFT JOIN categories c ON t.category_id = c.id "
+                         "WHERE c.type = 'Wydatek' AND t.date LIKE :year AND (t.is_fixed = 0 OR t.is_fixed IS NULL)");
+    queryOneTime.bindValue(":year", yearPattern);
+
+    double oneTimeSum = 0.0;
+    if (queryOneTime.exec() && queryOneTime.next()) {
+        oneTimeSum = queryOneTime.value(0).toDouble();
+    }
+
+    lblFixedCosts->setText(QString("Koszty stałe (%1): <span style='color:#e74c3c;'>%2 zł</span>").arg(currentYear).arg(fixedSum, 0, 'f', 2));
+    lblOneTimeCosts->setText(QString("Koszty jednorazowe (%1): <span style='color:#e67e22;'>%2 zł</span>").arg(currentYear).arg(oneTimeSum, 0, 'f', 2));
+}
+
+void MainWindow::updateFixedVariableChart() {
+    if (currentChartMode != 6) return;
+
+    for (auto axis : mainChart->axes()) {
+        mainChart->removeAxis(axis);
+    }
+
+    int wybranyRok = spinYear->value();
+    QString yearPattern = QString::number(wybranyRok) + "-%";
+
+    QSqlQuery queryFixed;
+    queryFixed.prepare("SELECT SUM(t.amount) FROM transactions t "
+                       "LEFT JOIN categories c ON t.category_id = c.id "
+                       "WHERE c.type = 'Wydatek' AND t.date LIKE :year AND t.is_fixed = 1");
+    queryFixed.bindValue(":year", yearPattern);
+
+    double fixedSum = 0.0;
+    if (queryFixed.exec() && queryFixed.next()) {
+        fixedSum = queryFixed.value(0).toDouble();
+    }
+
+    QSqlQuery queryOneTime;
+    queryOneTime.prepare("SELECT SUM(t.amount) FROM transactions t "
+                         "LEFT JOIN categories c ON t.category_id = c.id "
+                         "WHERE c.type = 'Wydatek' AND t.date LIKE :year AND (t.is_fixed = 0 OR t.is_fixed IS NULL)");
+    queryOneTime.bindValue(":year", yearPattern);
+
+    double oneTimeSum = 0.0;
+    if (queryOneTime.exec() && queryOneTime.next()) {
+        oneTimeSum = queryOneTime.value(0).toDouble();
+    }
+
+    if (fixedSum == 0 && oneTimeSum == 0) {
+        mainChart->removeAllSeries();
+        mainChart->setTitle(QString("Brak wydatków w roku %1").arg(wybranyRok));
+        return;
+    }
+
+    QPieSeries *series = new QPieSeries();
+    series->append(QString("Koszty Stałe: %1 zł").arg(QString::number(fixedSum, 'f', 2)), fixedSum);
+    series->append(QString("Koszty Jednorazowe: %1 zł").arg(QString::number(oneTimeSum, 'f', 2)), oneTimeSum);
+
+    if(series->slices().size() >= 2) {
+        series->slices().at(0)->setColor(QColor("#e74c3c"));
+        series->slices().at(1)->setColor(QColor("#e67e22"));
+        series->slices().at(0)->setLabelVisible(true);
+        series->slices().at(1)->setLabelVisible(true);
+    }
+
+    mainChart->removeAllSeries();
+    mainChart->addSeries(series);
+    mainChart->setTitle(QString("Podział wydatków stałych i zmiennych w roku %1").arg(wybranyRok));
+    mainChart->legend()->setVisible(true);
 }

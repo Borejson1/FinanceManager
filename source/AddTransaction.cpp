@@ -13,8 +13,11 @@ AddTransaction::AddTransaction(QWidget *parent)
     , ui(new Ui::AddTransaction)
 {
     ui->setupUi(this);
+    ui->editDate->setDate(QDate::currentDate());
+    ui->editDate->setCalendarPopup(true);
+    ui->editDate->setDisplayFormat("dd-MM-yyyy");
+    ui->editDate->setDate(QDate::currentDate());
 
-    ui->editDate->setPlaceholderText("DD-MM-RRRR");
     ui->editAmount->setValidator(new QDoubleValidator(0.0, 9999999.99, 2, this));
 
     loadCategories();
@@ -38,24 +41,7 @@ void AddTransaction::loadCategories()
     }
 }
 
-void AddTransaction::on_editDate_textEdited(const QString &text)
-{
-    QString cleanText;
-    for (QChar c : text) {
-        if (c.isDigit()) {
-            cleanText += c;
-        }
-    }
-    cleanText.truncate(8);
-    QString formattedText;
-    for (int i = 0; i < cleanText.length(); ++i) {
-        if (i == 2 || i == 4) {
-            formattedText += "-";
-        }
-        formattedText += cleanText[i];
-    }
-    ui->editDate->setText(formattedText);
-}
+
 
 void AddTransaction::on_pushButton_clicked()
 {
@@ -68,20 +54,9 @@ void AddTransaction::on_pushButton_clicked()
     }
 
     QString opis = ui->lineEdit->text();
-    QString wpisanaData = ui->editDate->text();
-
-    if (wpisanaData.length() < 10) {
-        QMessageBox::warning(this, "Błąd", "Niekompletna data.");
-        return;
-    }
-
-    QDate date = QDate::fromString(wpisanaData, "dd-MM-yyyy");
-    if (!date.isValid()) {
-        QMessageBox::warning(this, "Błąd", "Nieprawidłowa data.");
-        return;
-    }
-
+    QDate date = ui->editDate->date();
     QString dataDoBazy = date.toString("yyyy-MM-dd");
+
     QString czasUtworzenia = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
     int categoryId = ui->comboType->currentData().toInt();
 
@@ -91,13 +66,14 @@ void AddTransaction::on_pushButton_clicked()
     }
 
     QSqlQuery insertTrans;
-    insertTrans.prepare("INSERT INTO transactions (amount, date, description, category_id, created_at) "
-                        "VALUES (?, ?, ?, ?, ?)");
+    insertTrans.prepare("INSERT INTO transactions (amount, date, description, category_id, created_at, is_fixed) "
+                        "VALUES (?, ?, ?, ?, ?, ?)");
     insertTrans.addBindValue(kwota.toDouble());
     insertTrans.addBindValue(dataDoBazy);
     insertTrans.addBindValue(opis);
     insertTrans.addBindValue(categoryId);
     insertTrans.addBindValue(czasUtworzenia);
+    insertTrans.addBindValue(ui->checkIsFixed->isChecked() ? 1 : 0);
 
     if(insertTrans.exec()) {
         ui->editAmount->clear();

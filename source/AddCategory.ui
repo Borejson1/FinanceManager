@@ -13,6 +13,52 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">
+QWidget {
+    background-color: #f5f6fa;
+    color: #2f3542;
+}
+QLabel {
+    font-weight: bold;
+    font-size: 13px;
+    background: transparent;
+}
+QLineEdit {
+    background-color: #ffffff;
+    border: 1px solid #ced6e0;
+    border-radius: 5px;
+    padding: 5px 10px;
+    font-size: 13px;
+}
+QLineEdit:focus {
+    border: 1px solid #747d8c;
+    background-color: #fcfcfd;
+}
+QPushButton {
+    background-color: #dfe4ea;
+    border: 1px solid #ced6e0;
+    border-radius: 5px;
+    padding: 8px 15px;
+    font-weight: bold;
+    font-size: 13px;
+}
+QPushButton:hover {
+    background-color: #ced6e0;
+    border: 1px solid #a4b0be;
+}
+QPushButton:pressed {
+    background-color: #a4b0be;
+    color: #ffffff;
+}
+QRadioButton {
+    font-weight: bold;
+    font-size: 13px;
+    padding-left: 5px;
+    background: transparent;
+}
+   </string>
+  </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <spacer name="verticalSpacerTop">
@@ -38,7 +84,7 @@
        </item>
        <item>
         <widget class="QLineEdit" name="lineEdit">
-         <property name="minimumSize"><size><width>250</width><height>30</height></size></property>
+         <property name="minimumSize"><size><width>250</width><height>32</height></size></property>
          <property name="alignment"><set>Qt::AlignCenter</set></property>
         </widget>
        </item>

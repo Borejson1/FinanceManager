@@ -6,26 +6,123 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>700</width>
-    <height>250</height>
+    <width>850</width>
+    <height>350</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">
+QWidget {
+    background-color: #f5f6fa;
+    color: #2f3542;
+}
+QLabel {
+    font-weight: bold;
+    font-size: 13px;
+    background: transparent;
+}
+QLineEdit, QComboBox, QDateEdit {
+    background-color: #ffffff;
+    border: 1px solid #ced6e0;
+    border-radius: 5px;
+    padding: 5px 10px;
+    font-size: 13px;
+}
+QLineEdit:focus, QComboBox:focus, QDateEdit:focus {
+    border: 1px solid #747d8c;
+    background-color: #fcfcfd;
+}
+QComboBox::drop-down, QDateEdit::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 24px;
+    border-left: 1px solid #ced6e0;
+    background-color: #f1f2f6;
+    border-top-right-radius: 4px;
+    border-bottom-right-radius: 4px;
+}
+QComboBox::down-arrow, QDateEdit::down-arrow {
+    image: none;
+}
+QPushButton {
+    background-color: #dfe4ea;
+    border: 1px solid #ced6e0;
+    border-radius: 5px;
+    padding: 8px 15px;
+    font-weight: bold;
+    font-size: 13px;
+}
+QPushButton:hover {
+    background-color: #ced6e0;
+    border: 1px solid #a4b0be;
+}
+QPushButton:pressed {
+    background-color: #a4b0be;
+    color: #ffffff;
+}
+QCheckBox {
+    font-weight: bold;
+    font-size: 13px;
+    padding-left: 5px;
+    background: transparent;
+}
+/* KALENDARZ */
+QCalendarWidget QWidget#qt_calendar_navigationbar {
+    background-color: #f1f2f6;
+    border-bottom: 1px solid #ced6e0;
+}
+QCalendarWidget QToolButton {
+    font-weight: bold;
+    font-size: 13px;
+    background-color: transparent;
+    border: none;
+    padding: 5px;
+    border-radius: 4px;
+}
+QCalendarWidget QToolButton:hover { background-color: #dfe4ea; }
+QCalendarWidget QToolButton:pressed { background-color: #ced6e0; }
+QCalendarWidget QMenu { background-color: #ffffff; border: 1px solid #ced6e0; }
+QCalendarWidget QMenu::item:selected { background-color: #a4b0be; color: white; }
+QCalendarWidget QSpinBox { background-color: #ffffff; border: 1px solid #ced6e0; border-radius: 3px; }
+QCalendarWidget QAbstractItemView:enabled {
+    background-color: #ffffff;
+    selection-background-color: #a4b0be;
+    selection-color: white;
+    outline: none;
+}
+QCalendarWidget QAbstractItemView:disabled { color: #ced6e0; }
+   </string>
+  </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <spacer name="verticalSpacerTop">
-     <property name="orientation"><enum>Qt::Vertical</enum></property>
-     <property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property>
+     <property name="orientation">
+      <enum>Qt::Orientation::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
     </spacer>
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayoutCenter">
      <item>
       <spacer name="horizontalSpacerLeft">
-       <property name="orientation"><enum>Qt::Horizontal</enum></property>
-       <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
       </spacer>
      </item>
      <item>
@@ -34,72 +131,144 @@
         <layout class="QGridLayout" name="gridLayout">
          <item row="0" column="0">
           <widget class="QLabel" name="label">
-           <property name="text"><string>Kwota</string></property>
+           <property name="text">
+            <string>Kwota</string>
+           </property>
           </widget>
          </item>
          <item row="0" column="1">
           <widget class="QLabel" name="label_3">
-           <property name="text"><string>Kategoria</string></property>
+           <property name="text">
+            <string>Kategoria</string>
+           </property>
           </widget>
          </item>
          <item row="0" column="2">
           <widget class="QLabel" name="label_4">
-           <property name="text"><string>Data</string></property>
+           <property name="text">
+            <string>Data</string>
+           </property>
           </widget>
          </item>
          <item row="0" column="3">
           <widget class="QLabel" name="label_5">
-           <property name="text"><string>Opis</string></property>
+           <property name="text">
+            <string>Opis</string>
+           </property>
           </widget>
          </item>
          <item row="1" column="0">
           <widget class="QLineEdit" name="editAmount">
-           <property name="minimumSize"><size><width>120</width><height>25</height></size></property>
+           <property name="minimumSize">
+            <size>
+             <width>100</width>
+             <height>30</height>
+            </size>
+           </property>
           </widget>
          </item>
          <item row="1" column="1">
           <widget class="QComboBox" name="comboType">
-           <property name="minimumSize"><size><width>180</width><height>25</height></size></property>
-           <item><property name="text"><string>-- Wybierz kategorię --</string></property></item>
+           <property name="minimumSize">
+            <size>
+             <width>180</width>
+             <height>30</height>
+            </size>
+           </property>
+           <item>
+            <property name="text">
+             <string>-- Wybierz kategorię --</string>
+            </property>
+           </item>
           </widget>
          </item>
          <item row="1" column="2">
-          <widget class="QLineEdit" name="editDate">
-           <property name="minimumSize"><size><width>120</width><height>25</height></size></property>
+          <widget class="QDateEdit" name="editDate">
+           <property name="minimumSize">
+            <size>
+             <width>120</width>
+             <height>30</height>
+            </size>
+           </property>
+           <property name="calendarPopup">
+            <bool>true</bool>
+           </property>
           </widget>
          </item>
          <item row="1" column="3">
           <widget class="QLineEdit" name="lineEdit">
-           <property name="minimumSize"><size><width>150</width><height>25</height></size></property>
+           <property name="minimumSize">
+            <size>
+             <width>220</width>
+             <height>30</height>
+            </size>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="4">
+          <widget class="QCheckBox" name="checkIsFixed">
+           <property name="text">
+            <string>Koszt stały</string>
+           </property>
           </widget>
          </item>
         </layout>
        </item>
        <item>
         <spacer name="verticalSpacerMid">
-         <property name="orientation"><enum>Qt::Vertical</enum></property>
-         <property name="sizeType"><enum>QSizePolicy::Fixed</enum></property>
-         <property name="sizeHint" stdset="0"><size><width>20</width><height>15</height></size></property>
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Policy::Fixed</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>15</height>
+          </size>
+         </property>
         </spacer>
        </item>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayoutBtn">
          <item>
           <spacer name="horizontalSpacerBtnLeft">
-           <property name="orientation"><enum>Qt::Horizontal</enum></property>
-           <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
           </spacer>
          </item>
          <item>
           <widget class="QPushButton" name="pushButton">
-           <property name="minimumSize"><size><width>200</width><height>35</height></size></property>
-           <property name="text"><string>Dodaj Wydatek / Przychód</string></property>
+           <property name="minimumSize">
+            <size>
+             <width>200</width>
+             <height>35</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Dodaj Wydatek / Przychód</string>
+           </property>
           </widget>
          </item>
          <item>
           <spacer name="horizontalSpacerBtnRight">
-           <property name="orientation"><enum>Qt::Horizontal</enum></property>
-           <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
           </spacer>
          </item>
         </layout>
@@ -108,16 +277,30 @@
      </item>
      <item>
       <spacer name="horizontalSpacerRight">
-       <property name="orientation"><enum>Qt::Horizontal</enum></property>
-       <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
       </spacer>
      </item>
     </layout>
    </item>
    <item>
     <spacer name="verticalSpacerBottom">
-     <property name="orientation"><enum>Qt::Vertical</enum></property>
-     <property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property>
+     <property name="orientation">
+      <enum>Qt::Orientation::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>120</height>
+      </size>
+     </property>
     </spacer>
    </item>
   </layout>

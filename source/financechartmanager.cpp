@@ -5,12 +5,15 @@
 #include <QtCharts/QBarSeries>
 #include <QtCharts/QBarCategoryAxis>
 #include <QtCharts/QValueAxis>
+#include <QtCharts/QPieSeries>
+#include <QtCharts/QPieSlice>
 #include <QtGui/QPainter>
 #include <QtSql/QSqlQuery>
 #include <QtSql/QSqlRecord>
 #include <QtCore/QDate>
 #include <QtCore/QMap>
 #include <algorithm>
+#include <QList>
 
 FinanceChartManager::FinanceChartManager(QChartView *chartView)
     : m_chartView(chartView)
@@ -18,14 +21,12 @@ FinanceChartManager::FinanceChartManager(QChartView *chartView)
     m_chart = new QChart();
     m_chart->setTitle("Całkowity Bilans");
     m_chart->setAnimationOptions(QChart::SeriesAnimations);
-
     m_chartView->setChart(m_chart);
     m_chartView->setRenderHint(QPainter::Antialiasing);
 }
 
 FinanceChartManager::~FinanceChartManager()
 {
-
 }
 
 void FinanceChartManager::updateMainChart(QSqlQueryModel *model)
@@ -45,7 +46,6 @@ void FinanceChartManager::updateMainChart(QSqlQueryModel *model)
     double sumaWydatkow = 0.0;
 
     for (int i = 0; i < model->rowCount(); ++i) {
-
         double kwota = model->record(i).value("amount").toDouble();
         QString typ = model->record(i).value("type").toString();
 
@@ -68,13 +68,15 @@ void FinanceChartManager::updateMainChart(QSqlQueryModel *model)
     categories << "Bilans";
     QBarCategoryAxis *axisX = new QBarCategoryAxis();
     axisX->append(categories);
-    m_chart->setAxisX(axisX, series);
+    m_chart->addAxis(axisX, Qt::AlignBottom);
+    series->attachAxis(axisX);
 
     QValueAxis *axisY = new QValueAxis();
     double maxWartosc = std::max(sumaPrzychodow, sumaWydatkow) * 1.2;
     axisY->setRange(0, maxWartosc > 0 ? maxWartosc : 1000);
     axisY->setTitleText("Kwota w zł");
-    m_chart->setAxisY(axisY, series);
+    m_chart->addAxis(axisY, Qt::AlignLeft);
+    series->attachAxis(axisY);
 }
 
 void FinanceChartManager::updateExpenseChart()
@@ -175,19 +177,23 @@ void FinanceChartManager::updateMonthlySummaryChart()
     double przychodyM[12] = {0};
     double wydatkiM[12] = {0};
 
+    int currentYear = QDate::currentDate().year();
+
     QSqlQuery query;
-    query.exec("SELECT strftime('%m', t.date) as month, c.type, SUM(t.amount) "
-               "FROM transactions t JOIN categories c ON t.category_id = c.id "
-               "WHERE strftime('%Y', t.date) = strftime('%Y', 'now') "
-               "GROUP BY month, c.type");
+    query.prepare("SELECT strftime('%m', t.date) as month, c.type, SUM(t.amount) "
+                  "FROM transactions t JOIN categories c ON t.category_id = c.id "
+                  "WHERE strftime('%Y', t.date) = :year "
+                  "GROUP BY month, c.type");
+    query.bindValue(":year", QString::number(currentYear));
+    query.exec();
 
     while (query.next()) {
         int mIndex = query.value(0).toInt() - 1;
         if (mIndex >= 0 && mIndex < 12) {
             QString type = query.value(1).toString();
             double amt = query.value(2).toDouble();
-            if (type == "Przychód") przychodyM[mIndex] += amt;
-            else if (type == "Wydatek") wydatkiM[mIndex] += amt;
+            if (type == "Przychód" || type == "Income") przychodyM[mIndex] += amt;
+            else if (type == "Wydatek" || type == "Expense") wydatkiM[mIndex] += amt;
         }
     }
 
@@ -201,17 +207,21 @@ void FinanceChartManager::updateMonthlySummaryChart()
     QBarSeries *series = new QBarSeries();
     series->append(setPrzychody);
     series->append(setWydatki);
+    series->setBarWidth(0.8);
     m_chart->addSeries(series);
 
     QBarCategoryAxis *axisX = new QBarCategoryAxis();
     axisX->append(months);
-    m_chart->setAxisX(axisX, series);
+    m_chart->addAxis(axisX, Qt::AlignBottom);
+    series->attachAxis(axisX);
 
     QValueAxis *axisY = new QValueAxis();
     axisY->setRange(0, maxWartosc > 0 ? maxWartosc * 1.2 : 1000);
     axisY->setTitleText("Kwota w zł");
-    m_chart->setAxisY(axisY, series);
-    m_chart->setTitle("Podsumowanie Miesięczne (Obecny Rok)");
+    m_chart->addAxis(axisY, Qt::AlignLeft);
+    series->attachAxis(axisY);
+
+    m_chart->setTitle(QString("Podsumowanie Miesięczne (%1 Rok)").arg(currentYear));
 }
 
 void FinanceChartManager::updateYearlySummaryChart()
@@ -223,58 +233,82 @@ void FinanceChartManager::updateYearlySummaryChart()
         m_chart->removeAxis(axis);
     }
 
-    QBarSet *setPrzychody = new QBarSet("Przychody");
-    QBarSet *setWydatki = new QBarSet("Wydatki");
-    setPrzychody->setColor(QColor(46, 204, 113));
-    setWydatki->setColor(QColor(231, 76, 60));
+    int currentYear = QDate::currentDate().year();
+    QStringList yearsToShow;
+    yearsToShow << QString::number(currentYear - 2)
+                << QString::number(currentYear - 1)
+                << QString::number(currentYear);
+
+    QMap<QString, double> incomeData;
+    QMap<QString, double> expenseData;
 
     QSqlQuery query;
-    QStringList years;
-    query.exec("SELECT DISTINCT strftime('%Y', date) as year FROM transactions ORDER BY year");
+    query.prepare("SELECT strftime('%Y', t.date) as year, c.type, SUM(t.amount) "
+                  "FROM transactions t "
+                  "JOIN categories c ON t.category_id = c.id "
+                  "WHERE strftime('%Y', t.date) IN (:y1, :y2, :y3) "
+                  "GROUP BY year, c.type "
+                  "ORDER BY year ASC");
+    query.bindValue(":y1", yearsToShow[0]);
+    query.bindValue(":y2", yearsToShow[1]);
+    query.bindValue(":y3", yearsToShow[2]);
+    query.exec();
+
     while (query.next()) {
-        years << query.value(0).toString();
-    }
-
-    if (years.isEmpty()) {
-        years << QDate::currentDate().toString("yyyy");
-    }
-
-    QMap<QString, double> przychodyY;
-    QMap<QString, double> wydatkiY;
-
-    query.exec("SELECT strftime('%Y', t.date) as year, c.type, SUM(t.amount) "
-               "FROM transactions t JOIN categories c ON t.category_id = c.id "
-               "GROUP BY year, c.type");
-
-    while(query.next()) {
         QString year = query.value(0).toString();
         QString type = query.value(1).toString();
-        double amt = query.value(2).toDouble();
-        if (type == "Przychód") przychodyY[year] += amt;
-        else if (type == "Wydatek") wydatkiY[year] += amt;
+        double amount = query.value(2).toDouble();
+
+        if (type == "Przychód" || type == "Income") {
+            incomeData[year] += amount;
+        } else if (type == "Wydatek" || type == "Expense") {
+            expenseData[year] += amount;
+        }
     }
 
-    double maxWartosc = 0;
-    for (const QString &y : years) {
-        double p = przychodyY.value(y, 0.0);
-        double w = wydatkiY.value(y, 0.0);
-        *setPrzychody << p;
-        *setWydatki << w;
-        maxWartosc = std::max({maxWartosc, p, w});
+    QBarSet *incomeSet = new QBarSet("Przychody");
+    QBarSet *expenseSet = new QBarSet("Wydatki");
+    incomeSet->setColor(QColor(46, 204, 113));
+    expenseSet->setColor(QColor(231, 76, 60));
+
+    double maxValue = 0;
+
+    for (const QString &year : yearsToShow) {
+        double inc = incomeData.value(year, 0.0);
+        double exp = expenseData.value(year, 0.0);
+
+        *incomeSet << inc;
+        *expenseSet << exp;
+
+        maxValue = std::max({maxValue, inc, exp});
     }
 
     QBarSeries *series = new QBarSeries();
-    series->append(setPrzychody);
-    series->append(setWydatki);
+    series->append(incomeSet);
+    series->append(expenseSet);
+    series->setBarWidth(0.6);
     m_chart->addSeries(series);
 
     QBarCategoryAxis *axisX = new QBarCategoryAxis();
-    axisX->append(years);
-    m_chart->setAxisX(axisX, series);
+    axisX->append(yearsToShow);
+    m_chart->addAxis(axisX, Qt::AlignBottom);
+    series->attachAxis(axisX);
 
     QValueAxis *axisY = new QValueAxis();
-    axisY->setRange(0, maxWartosc > 0 ? maxWartosc * 1.2 : 1000);
+    axisY->setRange(0, maxValue > 0 ? maxValue * 1.2 : 1000);
+    axisY->setLabelFormat("%.1f");
     axisY->setTitleText("Kwota w zł");
-    m_chart->setAxisY(axisY, series);
-    m_chart->setTitle("Podsumowanie Roczne");
+    m_chart->addAxis(axisY, Qt::AlignLeft);
+    series->attachAxis(axisY);
+
+    m_chart->setTitle(QString("Podsumowanie Roczne (%1 - %2)").arg(yearsToShow.first(), yearsToShow.last()));
+}
+
+QList<int> FinanceChartManager::getAvailableYears() {
+    QList<int> years;
+    QSqlQuery query("SELECT DISTINCT strftime('%Y', date) FROM transactions ORDER BY date DESC");
+    while (query.next()) {
+        years << query.value(0).toInt();
+    }
+    return years;
 }

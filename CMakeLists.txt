@@ -8,13 +8,13 @@ qt_standard_project_setup()
 qt_add_executable(FinanceManager
     WIN32 MACOSX_BUNDLE
     main.cpp
-    mainwindow.cpp
-    mainwindow.h
-    mainwindow.ui
+    source/mainwindow.cpp
+    source/mainwindow.h
+    source/mainwindow.ui
     source/AddTransaction.h source/AddTransaction.cpp source/AddTransaction.ui
     source/AddCategory.h source/AddCategory.cpp source/AddCategory.ui
-    edittransactiondialog.h edittransactiondialog.cpp edittransactiondialog.ui
-    financechartmanager.h financechartmanager.cpp
+    source/edittransactiondialog.h source/edittransactiondialog.cpp source/edittransactiondialog.ui
+    source/financechartmanager.h source/financechartmanager.cpp
 )
 
 target_link_libraries(FinanceManager
